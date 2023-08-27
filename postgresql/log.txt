@@ -1,3 +1,10 @@
+CREATE SCHEMA IF NOT EXISTS TEMP; DROP TABLE IF EXISTS TEMP.hld_weather;
+psql:/media/sf_shared/netstock/postgresql/cleanup.sql:1: NOTICE:  schema "temp" already exists, skipping
+CREATE SCHEMA
+DROP TABLE
+CREATE TABLE IF NOT EXISTS TEMP.hld_weather(id TEXT PRIMARY KEY NOT NULL, city text, dailytime TIMESTAMP, temp_max DECIMAL, temp_min DECIMAL, sunset TIMESTAMP, sunrise TIMESTAMP, windspeed DECIMAL);
+CREATE TABLE
+COPY 88
 merge into TEMP.lve_weather sda
 using TEMP.hld_weather sdn
 on sda.id = sdn.id
@@ -6,3 +13,4 @@ when matched then
 when not matched then
   insert (id, city, dailytime, temp_max,temp_min,sunset,sunrise,windspeed)
   values (sdn.id, sdn.city, sdn.dailytime, sdn.temp_max,sdn.temp_min,sdn.sunset,sdn.sunrise,sdn.windspeed);
+MERGE 88

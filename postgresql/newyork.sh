@@ -7,12 +7,11 @@
 ##------------------------------------------------------
 ##--- Global Variables ---
 ##------------------------------------------------------
-CITY="latitude=-26.2023&longitude=28.0436"
+CITY="latitude=-40.710335&longitude=-73.99307"
 STARTDATE="2023-06-01"
 ENDDATE="2023-08-27"
 WORKFOLDER=/media/sf_shared/netstock/postgresql
 SQLLOG=$WORKFOLDER/log.txt
-CITYNAME="Johannesburg"
 ##------------------------------------------------------
 
 ##-- Load the JSON from the webservice into a temp variable --
@@ -28,8 +27,8 @@ if [ $(echo -n $JSONRAW | jq empty >  /dev/null 2>&1; echo $?) -eq 0 ]; then
 	# Clean up the temp table 
 	psql -d netstock -a -f $WORKFOLDER/cleanup.sql >> $SQLLOG 2>&1
         #echo "JHB json is valid"
-	echo $JSONRAW | jq '.daily.time[]' | tr -d '"' | awk '{print "JHB_"$1}' > $WORKFOLDER/id.csv
-	echo $JSONRAW | jq '.daily.time[]' | tr -d '"' | awk '{print "Johannesburg"}' > $WORKFOLDER/city.csv
+	echo $JSONRAW | jq '.daily.time[]' | tr -d '"' | awk '{print "NYC_"$1}' > $WORKFOLDER/id.csv
+	echo $JSONRAW | jq '.daily.time[]' | tr -d '"' | awk '{print "New York"}' > $WORKFOLDER/city.csv
 	echo $JSONRAW | jq '.daily.time[]' > $WORKFOLDER/timedaily.csv
 	echo $JSONRAW | jq '.daily.temperature_2m_max[]' > $WORKFOLDER/tempmax.csv
 	echo $JSONRAW | jq '.daily.temperature_2m_min[]' > $WORKFOLDER/tempmin.csv
