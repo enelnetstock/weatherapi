@@ -1,0 +1,74 @@
+Netstock Data Engineer Challenge - Weather
+==========================================
+Erhardt Nel
+
+:Author Initials: Erhardt Nel
+:toc:
+:data-uri:
+:icons:
+:numbered:
+:lang: en
+:encoding: UTF-8
+
+
+//////
+:revinfo:
+v1.0, Erhardt Nel, 2023-08-27:
+ Document created
+:legalnotice:
+.Terms of use: 
+This publication has been prepared for general guidance on matters of interest only.
+
+:copyright: 2023, Netstock.
+All rights reserved. No portion of this document may be
+reproduced by any process without the written permission of Next Biosciences.
+
+//////
+
+Introduction
+------------
+
+intro text here
+
+API Interface
+-------------
+
+The open-meteo.com weather API interface allow for hourly or daily weather forecasts. The decision was made to use the following global cities:
+
+* Johannesburg - South Africa
+* London - United Kingdom
+* New York City - United States
+
+Undestanding the API Data
+-------------------------
+
+The Api interface allows for unauthenticated access. I will be using a simple explorative tool like Microsot Excel to onnect to to the API to understand and unpack the returned data structures.
+This is achieved by setting up an excel web query to the API endpoint. 
+It is important to add the Accept-Encoding gzip header to the request because the api returns a gzipped stream.
+
+image::images/excel01.png[]
+
+<<<
+The Excel query returns mulliple nodes in JSON format. The next step is to expand each individual Json Array into a separate sub query. 
+
+image::images/excel03.png[]
+
+We now have individual queries to all the JSON node arrays from the API result. These queries can be individaully refreshed as data tables in Excel. 
+
+image::images/excel04.png[]
+
+<<<
+This porcess allows me to quickly unpack what the data structures are in Excel Sheets.
+
+image::images/excel05.png[]
+image::images/excel06.png[] 
+
+
+
+
+
+[index]
+Index
+-----
+
+
