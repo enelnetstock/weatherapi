@@ -9,7 +9,7 @@ pdf: $(TARGET).pdf
 all: html pdf
 
 %.html: %.txt
-	asciiindex $<
+	#asciiindex $<
 	asciidoctor $<
 
 %.pdf: %.txt

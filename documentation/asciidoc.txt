@@ -67,8 +67,24 @@ image::images/excel06.png[]
 Connect to API and push data to Postgresql
 ------------------------------------------
 
-Postgresql
-~~~~~~~~~~
+Postgresql Installation
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following commands were used to install postgresql on my virtual machine.
+
+[source, bash]
+----
+sudo apt install postgresql postgresql-contrib
+----
+
+I then allowed any client from any ip to connect to the Postgresql server by editing the /etc/postgresql/15/main/postgresql.conf configuration file and adding the following line to it.
+
+listen_addresses = '*'
+
+Please see Prodution Ready section below on steps to harden the Postgresql installation.
+
+Postgresql Setup
+~~~~~~~~~~~~~~~~
 
 The decision was made to post the weather API data to a local postgresql database hosted on a Debian Linux Virtual machine. 
 I created two tables, 
@@ -138,6 +154,17 @@ To that extend I have used native linux tools wrapped in a bash script to perfor
 6. Errors and exceptions were written to a log.txt file
 7. A Scheduled cron job that runs hourly, connects to the API and update the SQL tables.
 
+Extract Script Dependencies
++++++++++++++++++++++++++++
+
+The following commands were used to install the dependencies on my virtual machine.
+
+[source, bash]
+----
+sudo apt-get install jq
+sudo apt-get install curl
+----
+
 <<<
 .Script to fetch Johannesburg Data from API
 [source, Bash]
@@ -193,6 +220,118 @@ fi
 rm $WORKFOLDER/*.csv
 ##------------------------------------------------------
 ----
+
+<<<
+.The output of the log.txt file contains the following information.
+[source, SQL]
+----
+CREATE SCHEMA IF NOT EXISTS TEMP; DROP TABLE IF EXISTS TEMP.hld_weather;
+psql:/media/sf_shared/netstock/postgresql/cleanup.sql:1: NOTICE:  schema "temp" already exists, skipping
+CREATE SCHEMA
+DROP TABLE
+CREATE TABLE IF NOT EXISTS TEMP.hld_weather(id TEXT PRIMARY KEY NOT NULL, city text, dailytime TIMESTAMP, temp_max DECIMAL, temp_min DECIMAL, sunset TIMESTAMP, sunrise TIMESTAMP, windspeed DECIMAL);
+CREATE TABLE
+COPY 88
+merge into TEMP.lve_weather sda
+using TEMP.hld_weather sdn
+on sda.id = sdn.id
+when matched then
+  update set city = sdn.city, dailytime = sdn.dailytime, temp_max = sdn.temp_max, temp_min = sdn.temp_min, sunset = sdn.sunset, sunrise = sdn.sunrise, windspeed = sdn.windspeed
+when not matched then
+  insert (id, city, dailytime, temp_max,temp_min,sunset,sunrise,windspeed)
+  values (sdn.id, sdn.city, sdn.dailytime, sdn.temp_max,sdn.temp_min,sdn.sunset,sdn.sunrise,sdn.windspeed);
+MERGE 88
+----
+
+<<<
+PostgreSQL Table Data
+~~~~~~~~~~~~~~~~~~~~~
+
+.Output of Live table
+image::images/heidisql.png[]
+
+<<<
+Documentation Environment
+-------------------------
+
+Asciidoc
+~~~~~~~~
+I have used the Python based Asciidoc toolchain with the DBLatex rendering engine. Asciidoc allows you to add content in a text based markup language. The tool chain allows you to convert your output to both PDF and HTML. 
+The documentation source files are 100% text based which makes it ideal to put it under source control.
+
+I use a custom MAKE file to convert asciidoc.txt file to PDF or HTML by issuing the command "make pdf" or "make html"
+
+.Custom Make file
+[source, bash]
+----
+TARGET=asciidoc
+
+.PHONY: clean html xml pdf
+
+html: $(TARGET).html
+
+pdf: $(TARGET).pdf
+
+all: html pdf
+
+%.html: %.txt
+        asciidoctor $<
+
+%.pdf: %.txt        
+        a2x --no-xmllint -v -a docinfo -fpdf --dblatex-opts="-s asciidoc-dblatex-custom.sty" --dblatex-opts="--param=doc.lot.show=figure,table"  $<        
+        gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/printer -dNOPAUSE -dQUIET -dBATCH -sOutputFile=output.pdf asciidoc.pdf
+clean:
+        rm -f *~ $(TARGET).pdf $(TARGET).html docbook-xsl.css *.xml
+----
+
+Asciidoc Documentation
+++++++++++++++++++++++
+
+https://www.writethedocs.org/guide/writing/asciidoc[Asciidoc Markup Documentation]
+
+Asciidoc Installation on Linux
+++++++++++++++++++++++++++++++
+
+[source, bash]
+----
+# Install asciidoc with the dblatex backend
+sudo apt-get install asciidoc-dblatex
+
+#install asciidoctor for the html backend
+sudo apt-get install asciidoctor
+
+----
+
+<<<
+Elements needed to make the solution Prodution Ready
+----------------------------------------------------
+
+Basic Penetration Test
+~~~~~~~~~~~~~~~~~~~~~~
+
+A basic nmap scan against the virtual machine revealed port 22 [SSH] and 5432 [Postgresql] to be opened.
+
+[source, bash]
+----
+sudo nmap 192.168.88.30 
+
+Starting Nmap 7.93 ( https://nmap.org ) at 2023-08-28 00:54 SAST
+Nmap scan report for 192.168.88.30
+Host is up (0.000035s latency).
+
+PORT     STATE SERVICE
+22/tcp   open  ssh
+5432/tcp open  postgresql
+
+Nmap done: 1 IP address (1 host up) scanned in 0.11 seconds
+----
+
+The version of Postgresql is revealed as 15.3 by issuing the following command: psql -c "SELECT version();"
+
+<<<
+There are no known exploits listed for version 15.3 of postgresql
+
+image::images/exploitdb1.png[]	
 
 [index]
 Index
