@@ -348,8 +348,8 @@ image::images/PowerBI.png[]
 
 
 <<<
-Steps needed to make the solution Prodution Ready
--------------------------------------------------
+Steps needed to make the solution Production Ready
+--------------------------------------------------
 
 Basic Penetration Test
 ~~~~~~~~~~~~~~~~~~~~~~
