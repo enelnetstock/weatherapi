@@ -1,5 +1,5 @@
-Netstock Data Engineer Challenge - Weather
-==========================================
+Netstock Data Engineer Challenge - Weather API
+==============================================
 Erhardt Nel
 
 :Author Initials: Erhardt Nel
@@ -28,7 +28,7 @@ reproduced by any process without the written permission of NETSTOCK.
 Introduction
 ------------
 
-intro text here
+This project focuses on a custom built ETL process to fetch weather data from the Open Meteo API, posts it periodically into a PostgreSQL table with the ability to perform delta changes. 
 
 API Interface
 -------------
@@ -39,55 +39,54 @@ The open-meteo.com weather API interface allow for hourly or daily weather forec
 * London - United Kingdom
 * New York City - United States
 
-Undestanding the API Data
--------------------------
+Understanding the API Data
+--------------------------
 
-The Api interface allows for unauthenticated access. I will be using a simple explorative tool like Microsot Excel to onnect to to the API to understand and unpack the returned data structures.
+The Api interface allows for unauthenticated access, using a simple explorative tool like Microsoft Excel to connect to the API to understand and unpack the returned data structures.
 This is achieved by setting up an excel web query to the API endpoint. 
-It is important to add the Accept-Encoding gzip header to the request because the api returns a gzipped stream.
+It is important to add the Accept-Encoding gzip header to the request because the API returns a gzipped stream.
 
 image::images/excel01.png[Excel GZIP header]
 
 <<<
-The Excel query returns mulliple nodes in JSON format. The next step is to expand each individual Json Array into a separate sub query. 
+The Excel query returns multiple nodes in JSON format. The next step is to expand each individual Json Array into a separate sub query. 
 
 image::images/excel03.png[]
 
-We now have individual queries to all the JSON node arrays from the API result. These queries can be individaully refreshed as data tables in Excel. 
+We now have individual queries to all the JSON node arrays from the API result. These queries can be individually refreshed as data tables in Excel. 
 
 image::images/excel04.png[]
 
 <<<
-This porcess allows me to quickly unpack what the data structures are in Excel Sheets.
+This process allows me to quickly unpack what the data structures are in Excel Sheets.
 
 image::images/excel05.png[]
 image::images/excel06.png[] 
 
 <<<
-Connect to API and push data to Postgresql
-------------------------------------------
+Fetch API data and create/update records in PostgreSQL
+------------------------------------------------------
 
-Postgresql Installation
+PostgreSQL Installation
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-The following commands were used to install postgresql on my virtual machine.
+The following commands were used to install postgreSQL on my virtual machine.
 
 [source, bash]
 ----
 sudo apt install postgresql postgresql-contrib
 ----
 
-I then allowed any client from any ip to connect to the Postgresql server by editing the /etc/postgresql/15/main/postgresql.conf configuration file and adding the following line to it.
+For the purpose of this project I allowed any client from any ip to connect to the PostgreSQL server by editing the /etc/postgresql/15/main/postgresql.conf configuration file and adding the following line to it.
 
 listen_addresses = '*'
 
-Please see Prodution Ready section below on steps to harden the Postgresql installation.
+Please see Production Ready section below on steps to harden the PostgreSQL installation.
 
 Postgresql Setup
 ~~~~~~~~~~~~~~~~
 
-The decision was made to post the weather API data to a local postgresql database hosted on a Debian Linux Virtual machine. 
-I created two tables, 
+The decision was made to post the weather API data to a local postgresql database hosted on a Debian Linux Virtual machine using two tables. 
 
 .First - Temp Table: hld.weather
 [source,sql]
@@ -123,8 +122,9 @@ CREATE TABLE IF NOT EXISTS TEMP.lve_weather(
 
 ----
 
-The Temp table is used to push delta changes to the live table by using the native Postgresql Merge functionality.
-This script will merge *HLD* table into the *LVE* table based on if the ID column is matched and if not it will insert a new record. 
+<<<
+The Temp table is used to push delta changes to the live table by using the native Postgresql *Merge* functionality.
+This script will merge *HLD* table into the *LVE* table based on the ID column when matched and if not, it will insert a new record. 
 
 .Merge SQL script
 [source,sql]
@@ -143,15 +143,15 @@ when not matched then
 Extract Scripts
 ~~~~~~~~~~~~~~~
 
-The extract scripts were build with the KISS principle by limiting external dependencies on the virtual machine. 
-To that extend I have used native linux tools wrapped in a bash script to perform the following tasks:
+The extract scripts were built using the KISS principle by limiting external dependencies on the virtual machine. 
+To that extend I have used native Linux tools wrapped in a bash script to perform the following tasks:
 
-1. Connect to the API using Curl
-2. Validate that the return string is valid JSON by using the jq linux command
+1. Connect to the API using Curl.
+2. Validate that the return string is valid JSON by using the jq Linux command.
 3. Extract the JSON array values [ time, temperature_2m_max, temperature_2m_min, sunset, sunrise, windspeed_10m_max ] using the Linux jq command and adding the selectors.
 4. The extracted values were then combined into a csv file for each of the cities.
-5. The csv file is then posted to PostgreSQL using the *psql* commandline syntax.
-6. Errors and exceptions were written to a log.txt file
+5. The csv file is then posted to PostgreSQL using the *psql* command line syntax.
+6. Errors and exceptions were written to a log.txt file.
 7. A Scheduled cron job that runs hourly, connects to the API and update the SQL tables.
 
 Extract Script Dependencies
@@ -171,9 +171,9 @@ sudo apt-get install curl
 ----
 #!/bin/bash
 
-## This script fetch the different cities json data and check if valid json is returned.
-## It then transform the different columns and post the data to a postgresql temp table.
-## Using the native postgresql merge statment to merge delta changes into the master table.
+## This script fetches the different cities json data and check if valid json is returned.
+## It then transforms the different columns and post the data to a postgresql temp table.
+## Using the native postgresql merge statement to merge delta changes into the master table.
 
 ##------------------------------------------------------
 ##--- Global Variables ---
@@ -244,10 +244,43 @@ MERGE 88
 ----
 
 <<<
+Cron Job to load and merge data periodically
+++++++++++++++++++++++++++++++++++++++++++++
+
+I created a script called cronrun.sh that will collect the API data across the three cities.
+
+.cronrun.sh
+[source, BASH]
+----
+#!/bin/bash
+
+## This scrpt is called by a cron job to connect to the weather API and post the various city data to Postgresql
+
+##------------------------------------------------------
+##--- Global Variables ---
+##------------------------------------------------------
+WORKFOLDER=/media/sf_shared/netstock/postgresql
+/$WORKFOLDER/jhb.sh
+/$WORKFOLDER/london.sh
+/$WORKFOLDER/newyork.sh
+----
+
+I then installed an hourly cron job to fetch the data.
+
+.CronJob
+[source ,bash]
+----
+crontab -e
+
+0 7-18 * * * /media/sf_shared/netstock/postgresql/cronrun.sh 2>&1
+----
+
+
+<<<
 PostgreSQL Table Data
 ~~~~~~~~~~~~~~~~~~~~~
 
-.Output of Live table
+.Output of SQL table data
 image::images/heidisql.png[]
 
 <<<
@@ -256,7 +289,7 @@ Documentation Environment
 
 Asciidoc
 ~~~~~~~~
-I have used the Python based Asciidoc toolchain with the DBLatex rendering engine. Asciidoc allows you to add content in a text based markup language. The tool chain allows you to convert your output to both PDF and HTML. 
+I have used the Python based Asciidoc toolchain with the DBLatex rendering engine. Asciidoc allows you to add content in a text-based markup language. The tool chain allows you to convert your output to both PDF and HTML. 
 The documentation source files are 100% text based which makes it ideal to put it under source control.
 
 I use a custom MAKE file to convert asciidoc.txt file to PDF or HTML by issuing the command "make pdf" or "make html"
@@ -303,8 +336,20 @@ sudo apt-get install asciidoctor
 ----
 
 <<<
-Elements needed to make the solution Prodution Ready
-----------------------------------------------------
+Visualization of data using Microsoft Power BI Desktop
+------------------------------------------------------
+
+Power BI is configured to connect to the PostgreSQL server to retrieve the table data.
+
+I created a simple vizualization to display the differences between the minimum and maximum temperatures across the three cities for one month.
+
+.Power BI visualization
+image::images/PowerBI.png[]
+
+
+<<<
+Steps needed to make the solution Prodution Ready
+-------------------------------------------------
 
 Basic Penetration Test
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -333,8 +378,27 @@ There are no known exploits listed for version 15.3 of postgresql
 
 image::images/exploitdb1.png[]	
 
-[index]
-Index
------
+Steps to harden the Postgresql setup
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. Port 5432 should not be exposed to the world. 
+2. Only allow localhost to connect to the server
+3. You can use SSH port forwarding to connect from the outside world.
+
+Steps to harden SSH on the Linux server
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. No root access
+2. Install fail2ban to allow lockout after two incorrect attempts.
+3. Use certificate-based authentication vs username and password.
+
+Alternatives to custom built solution
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. Use automated pipelines for example Apache Airflow to extract the data.
+
+
+
+
 
 
